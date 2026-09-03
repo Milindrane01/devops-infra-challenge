@@ -11,10 +11,13 @@
 - [x] Namespace `appns` + `postgres-secret` created in-cluster (`scripts/bootstrap-secret.sh`)
 - [x] README.md written with architecture, setup, reliability rationale, failure-injection walkthrough, tradeoffs, teardown
 
+## Done (cont.)
+- [x] GitHub repo created (private): https://github.com/Milindrane01/devops-infra-challenge
+- [x] `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` added as GitHub Actions secrets
+- [x] Pushed to `main` -> first CI/CD run triggered automatically (watching it)
+
 ## In progress / next
-- [ ] Create GitHub repo and push (need `gh repo create`)
-- [ ] Add `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` as GitHub Actions secrets
-- [ ] Push to `main` -> watch first automated CI/CD run build+deploy
+- [ ] Confirm first CI/CD run succeeded (build -> ECR push -> kubectl apply -> rollout status)
 - [ ] Verify app end-to-end (`kubectl port-forward svc/backend`, curl `/items`)
 - [ ] Live: run the intentional failure (bad `PGHOST` env var) and debug it on camera
 - [ ] Record the video (demo, architecture walkthrough, failure debugging, tradeoffs)
