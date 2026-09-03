@@ -1,0 +1,13 @@
+{
+  "name": "devops-challenge-backend",
+  "version": "1.0.0",
+  "description": "Minimal backend service for the 90-minute infra challenge",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}

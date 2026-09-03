@@ -1,0 +1,30 @@
+# Progress
+
+## Done
+- [x] Scaffolded app (`app/`): Node/Express backend with `/`, `/healthz`, `/readyz`, `/items` (GET+POST), Postgres via `pg`
+- [x] `app/Dockerfile` (multi-stage, non-root user)
+- [x] K8s manifests (`k8s/`): namespace, postgres (PVC + Deployment + Service), backend (ConfigMap + Deployment w/ readiness+liveness probes + resource limits + Service)
+- [x] GitHub Actions pipeline (`.github/workflows/deploy.yml`): build -> push to ECR -> `kubectl apply` -> `kubectl rollout status`
+- [x] ECR repo created: `569360421155.dkr.ecr.ap-south-1.amazonaws.com/devops-challenge-backend`
+- [x] EKS cluster `devops-challenge` created in `ap-south-1` (2x t3.medium managed nodegroup) — **currently running and billing**
+- [x] `kubectl` context points at the cluster (`~/.kube/config`)
+- [x] Namespace `appns` + `postgres-secret` created in-cluster (`scripts/bootstrap-secret.sh`)
+- [x] README.md written with architecture, setup, reliability rationale, failure-injection walkthrough, tradeoffs, teardown
+
+## In progress / next
+- [ ] Create GitHub repo and push (need `gh repo create`)
+- [ ] Add `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` as GitHub Actions secrets
+- [ ] Push to `main` -> watch first automated CI/CD run build+deploy
+- [ ] Verify app end-to-end (`kubectl port-forward svc/backend`, curl `/items`)
+- [ ] Live: run the intentional failure (bad `PGHOST` env var) and debug it on camera
+- [ ] Record the video (demo, architecture walkthrough, failure debugging, tradeoffs)
+- [ ] **Teardown after recording**: `eksctl delete cluster --name devops-challenge --region ap-south-1` (cluster is billing right now)
+
+## Key facts to remember
+- AWS account: `569360421155`, region `ap-south-1`
+- EKS cluster name: `devops-challenge`
+- ECR repo: `devops-challenge-backend`
+- k8s namespace: `appns`
+- Reliability improvement chosen: readiness/liveness probes (split DB-dependent readiness from process-only liveness)
+- Intentional failure chosen: bad `PGHOST` env var (`kubectl set env deployment/backend -n appns PGHOST=postgres-typo`) -> readiness probe fails, pods drop out of Service endpoints, no restart-loop
+- No Docker/kubectl/eksctl/gh were preinstalled locally (Windows, no admin rights) — kubectl/eksctl/gh were downloaded as standalone binaries into `~/bin`; Docker builds happen in GitHub Actions (which has Docker preinstalled), not locally

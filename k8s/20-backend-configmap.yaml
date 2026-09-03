@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: appns
+data:
+  PGHOST: "postgres"
+  PGPORT: "5432"
+  PGDATABASE: "appdb"
+  PGUSER: "appuser"

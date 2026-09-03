@@ -1,0 +1,60 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: devops-challenge-backend
+  EKS_CLUSTER_NAME: devops-challenge
+  K8S_NAMESPACE: appns
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:${{ github.sha }}"
+          docker build -t "$IMAGE" ./app
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+
+      - name: Apply manifests
+        run: |
+          sed "s|IMAGE_PLACEHOLDER|${{ steps.build.outputs.image }}|g" k8s/22-backend-deployment.yaml > /tmp/backend-deployment.yaml
+          kubectl apply -f k8s/00-namespace.yaml
+          kubectl apply -f k8s/11-postgres-pvc.yaml
+          kubectl apply -f k8s/12-postgres-deployment.yaml
+          kubectl apply -f k8s/13-postgres-service.yaml
+          kubectl apply -f k8s/20-backend-configmap.yaml
+          kubectl apply -f /tmp/backend-deployment.yaml
+          kubectl apply -f k8s/23-backend-service.yaml
+
+      - name: Wait for rollout to finish
+        run: kubectl rollout status deployment/backend -n "$K8S_NAMESPACE" --timeout=180s
