@@ -36,6 +36,18 @@ eksctl create cluster --name devops-challenge --region ap-south-1 \
 
 aws eks update-kubeconfig --name devops-challenge --region ap-south-1
 
+# EKS ships with no working dynamic storage provisioner out of the box, so the
+# postgres PVC needs the EBS CSI driver + an IRSA role installed once per cluster:
+eksctl utils associate-iam-oidc-provider --cluster devops-challenge --region ap-south-1 --approve
+eksctl create iamserviceaccount \
+  --name ebs-csi-controller-sa --namespace kube-system \
+  --cluster devops-challenge --region ap-south-1 \
+  --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
+  --role-only --role-name AmazonEKS_EBS_CSI_DriverRole_devops-challenge --approve
+aws eks create-addon --cluster-name devops-challenge --addon-name aws-ebs-csi-driver \
+  --region ap-south-1 \
+  --service-account-role-arn arn:aws:iam::<ACCOUNT_ID>:role/AmazonEKS_EBS_CSI_DriverRole_devops-challenge
+
 ./scripts/bootstrap-secret.sh   # creates namespace + postgres-secret (never committed)
 
 gh secret set AWS_ACCESS_KEY_ID -b"<value>"
@@ -66,6 +78,19 @@ thresholds (too aggressive `failureThreshold`/`periodSeconds`) can flap pods in 
 service during brief hiccups, or mask a real hang for too long if set too loose. It also
 doesn't fix the underlying dependency failure — it just stops it from becoming a
 user-facing outage while it lasts.
+
+## A real (unplanned) failure hit while building this
+
+The very first CI/CD run built, pushed, and applied cleanly, but `kubectl rollout status`
+timed out after 180s. `kubectl get pods -n appns` showed the postgres pod stuck `Pending`
+and both backend pods `Running` but `0/1 READY`. `kubectl describe pvc postgres-pvc`
+showed `no persistent volumes available for this claim and no storage class is set`:
+EKS doesn't ship a working dynamic storage provisioner by default — the `aws-ebs-csi-driver`
+addon isn't installed on a plain `eksctl create cluster`. Fixed by associating an IAM OIDC
+provider, creating an IRSA role, installing the addon, and adding an explicit `ebs-gp3`
+StorageClass (`k8s/10-storageclass.yaml`) that the PVC references by name. This is exactly
+the readiness-probe behavior described above working as intended: the backend never
+crash-looped, it just correctly reported "not ready" the whole time postgres couldn't start.
 
 ## Intentional failure simulation: bad environment variable / DB connectivity
 

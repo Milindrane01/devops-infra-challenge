@@ -22,8 +22,10 @@
   `ebs-csi-controller-sa`, installing the `aws-ebs-csi-driver` EKS addon, and adding
   an explicit `ebs-gp3` StorageClass (`k8s/10-storageclass.yaml`) referenced by name
   from the PVC instead of relying on an implicit default.
-- [ ] Push the storage-class fix -> confirm CI/CD run now goes green end-to-end
-- [ ] Verify app end-to-end (`kubectl port-forward svc/backend`, curl `/items`)
+- [x] Pushed the storage-class fix -> CI/CD run went green end-to-end (build, push, apply, both rollouts healthy)
+- [x] Verified app end-to-end via `kubectl port-forward svc/backend 8080:80`:
+  `/` ok, `/healthz` alive, `/readyz` ready+db connected, `POST /items` + `GET /items`
+  round-trip through Postgres correctly
 - [ ] Live: run the intentional failure (bad `PGHOST` env var) and debug it on camera
 - [ ] Record the video (demo, architecture walkthrough, failure debugging, tradeoffs)
 - [ ] **Teardown after recording**: `eksctl delete cluster --name devops-challenge --region ap-south-1` (cluster is billing right now)
