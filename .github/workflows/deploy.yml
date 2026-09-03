@@ -49,6 +49,7 @@ jobs:
         run: |
           sed "s|IMAGE_PLACEHOLDER|${{ steps.build.outputs.image }}|g" k8s/22-backend-deployment.yaml > /tmp/backend-deployment.yaml
           kubectl apply -f k8s/00-namespace.yaml
+          kubectl apply -f k8s/10-storageclass.yaml
           kubectl apply -f k8s/11-postgres-pvc.yaml
           kubectl apply -f k8s/12-postgres-deployment.yaml
           kubectl apply -f k8s/13-postgres-service.yaml
@@ -57,4 +58,6 @@ jobs:
           kubectl apply -f k8s/23-backend-service.yaml
 
       - name: Wait for rollout to finish
-        run: kubectl rollout status deployment/backend -n "$K8S_NAMESPACE" --timeout=180s
+        run: |
+          kubectl rollout status deployment/postgres -n "$K8S_NAMESPACE" --timeout=180s
+          kubectl rollout status deployment/backend -n "$K8S_NAMESPACE" --timeout=180s

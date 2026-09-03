@@ -4,6 +4,7 @@ metadata:
   name: postgres-pvc
   namespace: appns
 spec:
+  storageClassName: ebs-gp3
   accessModes:
     - ReadWriteOnce
   resources:

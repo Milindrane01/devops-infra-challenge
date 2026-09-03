@@ -10,11 +10,19 @@
 - [x] `kubectl` context points at the cluster (`~/.kube/config`)
 - [x] Namespace `appns` + `postgres-secret` created in-cluster (`scripts/bootstrap-secret.sh`)
 - [x] README.md written with architecture, setup, reliability rationale, failure-injection walkthrough, tradeoffs, teardown
-
-## In progress / next
-- [ ] Create GitHub repo and push (need `gh repo create`)
-- [ ] Add `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` as GitHub Actions secrets
-- [ ] Push to `main` -> watch first automated CI/CD run build+deploy
+- [x] GitHub repo created (private): https://github.com/Milindrane01/devops-infra-challenge
+- [x] `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` added as GitHub Actions secrets
+- [x] First CI/CD run: build+push+apply succeeded, but `kubectl rollout status` **timed out and failed** —
+  real bug, not the intentional one. Root cause: EKS ships no working dynamic storage
+  provisioner by default (`gp2` StorageClass exists but isn't default, and its
+  in-tree `kubernetes.io/aws-ebs` provisioner is deprecated/removed on this k8s
+  version). `postgres-pvc` stayed `Pending` forever -> postgres pod `Pending` ->
+  backend `/readyz` correctly returned 503 the whole time -> rollout never completed.
+  Fixed by: `eksctl utils associate-iam-oidc-provider`, an IRSA role for
+  `ebs-csi-controller-sa`, installing the `aws-ebs-csi-driver` EKS addon, and adding
+  an explicit `ebs-gp3` StorageClass (`k8s/10-storageclass.yaml`) referenced by name
+  from the PVC instead of relying on an implicit default.
+- [ ] Push the storage-class fix -> confirm CI/CD run now goes green end-to-end
 - [ ] Verify app end-to-end (`kubectl port-forward svc/backend`, curl `/items`)
 - [ ] Live: run the intentional failure (bad `PGHOST` env var) and debug it on camera
 - [ ] Record the video (demo, architecture walkthrough, failure debugging, tradeoffs)
